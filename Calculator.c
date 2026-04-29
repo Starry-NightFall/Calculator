@@ -1,14 +1,91 @@
 #include <stdio.h>   // Enables Standard Input and Output in C code
 #include <stdlib.h>  // Essential Header for using `system()` function
 #include <string.h>  // Required for string operations (strcmp, strcpy, etc.)
+#include <time.h>    // Required for date/time stamps in log entries
+#include <conio.h>   // Required for getch() — password masking on Windows
 
 // ===== File path for storing user credentials =====
 // Users are stored as "username password" per line in this file.
 // The admin account is hardcoded and NOT stored in this file.
 #define USER_FILE "users.txt"
 
+// ===== File path for the activity log =====
+// Logs are stored as "YYYY-MM-DD HH:MM:SS <user> <operation>" per line.
+#define LOG_FILE "log.txt"
+
 // ===== Maximum length for username and password strings =====
 #define MAX_LEN 50
+
+// ============================================================
+// FUNCTION: writeLog
+// PURPOSE:  Appends a timestamped log entry to LOG_FILE.
+//           Format: "YYYY-MM-DD HH:MM:SS <user> <operation>"
+// PARAMS:   user      - the username performing the action
+//           operation - description of what happened
+// ============================================================
+void writeLog(const char *user, const char *operation)
+{
+  FILE *fp = fopen(LOG_FILE, "a");
+  if (fp == NULL)
+  {
+    // Silently fail — logging should not block the program
+    return;
+  }
+
+  // Get the current date and time
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+
+  // Write log entry in format: YYYY-MM-DD HH:MM:SS <user> <operation>
+  fprintf(fp, "%04d-%02d-%02d %02d:%02d:%02d %s %s\n",
+          t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+          t->tm_hour, t->tm_min, t->tm_sec,
+          user, operation);
+
+  fclose(fp);
+}
+
+// ============================================================
+// FUNCTION: readPassword
+// PURPOSE:  Reads a password from the user with masking.
+//           Each typed character is replaced with '*' on screen.
+//           Supports backspace to delete characters.
+//           The password is null-terminated and stored in `dest`.
+// PARAMS:   dest - buffer to store the password (must be MAX_LEN)
+// ============================================================
+void readPassword(char *dest)
+{
+  int i = 0;  // Current position in the password buffer
+  char ch;    // Holds each character as it is typed
+
+  // Read characters one by one until Enter (\r) is pressed
+  while (1)
+  {
+    ch = getch(); // Read a single character without echoing it
+
+    if (ch == '\r' || ch == '\n') // Enter key pressed — done
+    {
+      break;
+    }
+    else if (ch == '\b' || ch == 127) // Backspace key pressed
+    {
+      if (i > 0)
+      {
+        i--;
+        // Move cursor back, overwrite the '*' with space, move back again
+        printf("\b \b");
+      }
+    }
+    else if (i < MAX_LEN - 1) // Regular character (within buffer limit)
+    {
+      dest[i++] = ch;
+      printf("*"); // Show '*' instead of the actual character
+    }
+  }
+
+  dest[i] = '\0'; // Null-terminate the password string
+  printf("\n");   // Move to the next line after password entry
+}
 
 // ===== Utility: Clear the terminal screen (cross-platform) =====
 void clearUI()
@@ -77,11 +154,12 @@ void adminUI()
   printf("|   1. Create New User       |\n");
   printf("|   2. Delete Existing User  |\n");
   printf("|   3. View All Users        |\n");
-  printf("|   4. Log Out               |\n");
+  printf("|   4. View Logs             |\n");
+  printf("|   5. Log Out               |\n");
   printf("|                            |\n");
   printf("------------------------------\n");
   printf("\n\n");
-  printf("Select an option (1-4): ");
+  printf("Select an option (1-5): ");
 }
 
 // ============================================================
@@ -100,11 +178,14 @@ int adminLogin()
   printf("Enter Admin Username: ");
   scanf("%s", username);
   printf("Enter Admin Password: ");
-  scanf("%s", password);
+  readPassword(password); // Masked input — shows '*' instead of characters
 
   // Compare entered credentials with hardcoded admin credentials
   if (strcmp(username, "admin") == 0 && strcmp(password, "admin") == 0)
   {
+    // Log: Admin login
+    writeLog("admin", "Logged in (Admin)");
+
     printf("\n>> Admin login successful!\n");
     printf("\nPress ENTER to continue...");
     getchar(); // Catch newline from scanf
@@ -125,9 +206,11 @@ int adminLogin()
 // FUNCTION: userLogin
 // PURPOSE:  Validates user credentials against the users.txt file.
 //           Each line in the file has format: "username password"
+//           On success, copies the username into loggedInUser so
+//           the caller can track who is logged in.
 // RETURNS:  1 if login is successful, 0 otherwise.
 // ============================================================
-int userLogin()
+int userLogin(char *loggedInUser)
 {
   char username[MAX_LEN], password[MAX_LEN];
   char fileUser[MAX_LEN], filePass[MAX_LEN];
@@ -139,7 +222,7 @@ int userLogin()
   printf("Enter Username: ");
   scanf("%s", username);
   printf("Enter Password: ");
-  scanf("%s", password);
+  readPassword(password); // Masked input — shows '*' instead of characters
 
   // Open the users file for reading
   FILE *fp = fopen(USER_FILE, "r");
@@ -167,6 +250,12 @@ int userLogin()
 
   if (found)
   {
+    // Copy the username out so the caller knows who logged in
+    strcpy(loggedInUser, username);
+
+    // Log: User login
+    writeLog(username, "Logged in (User)");
+
     printf("\n>> Login successful! Welcome, %s.\n", username);
     printf("\nPress ENTER to continue...");
     getchar();
@@ -236,7 +325,7 @@ void createUser()
 
   // Username is unique — ask for the password
   printf("Enter Password for '%s': ", username);
-  scanf("%s", password);
+  readPassword(password); // Masked input — shows '*' instead of characters
 
   // Append the new user to the file
   fp = fopen(USER_FILE, "a");
@@ -251,6 +340,12 @@ void createUser()
 
   fprintf(fp, "%s %s\n", username, password);
   fclose(fp);
+
+  // Log: Admin created a new user
+  // Build a descriptive operation string like "Created user: siam"
+  char logMsg[MAX_LEN + 20];
+  sprintf(logMsg, "Created user: %s", username);
+  writeLog("admin", logMsg);
 
   printf("\n>> User '%s' created successfully!\n", username);
   printf("\nPress ENTER to continue...");
@@ -320,6 +415,11 @@ void deleteUser()
 
   if (found)
   {
+    // Log: Admin deleted a user
+    char logMsg[MAX_LEN + 20];
+    sprintf(logMsg, "Deleted user: %s", username);
+    writeLog("admin", logMsg);
+
     printf("\n>> User '%s' deleted successfully!\n", username);
   }
   else
@@ -378,9 +478,54 @@ void viewAllUsers()
 }
 
 // ============================================================
+// FUNCTION: viewLogs
+// PURPOSE:  Displays all log entries from log.txt.
+//           Each line is printed as-is (timestamped entries).
+// ============================================================
+void viewLogs()
+{
+  char line[256]; // Buffer to hold each log line
+  int count = 0;  // Counter for log entries
+
+  header();
+  printf("\n--- ACTIVITY LOG ---\n\n");
+
+  FILE *fp = fopen(LOG_FILE, "r");
+  if (fp == NULL)
+  {
+    printf("   No log entries found.\n");
+    printf("\nPress ENTER to continue...");
+    getchar();
+    getchar();
+    return;
+  }
+
+  // Read and display each log entry line by line
+  while (fgets(line, sizeof(line), fp) != NULL)
+  {
+    count++;
+    printf("   %d. %s", count, line);
+  }
+  fclose(fp);
+
+  if (count == 0)
+  {
+    printf("   No log entries found.\n");
+  }
+  else
+  {
+    printf("\n   Total Log Entries: %d\n", count);
+  }
+
+  printf("\nPress ENTER to continue...");
+  getchar();
+  getchar();
+}
+
+// ============================================================
 // FUNCTION: adminPanel
 // PURPOSE:  The admin dashboard loop. Admin can create users,
-//           delete users, view all users, or log out.
+//           delete users, view all users, view logs, or log out.
 // ============================================================
 void adminPanel()
 {
@@ -406,11 +551,17 @@ void adminPanel()
       break;
 
     case 4:
+      viewLogs(); // Show activity log entries
+      break;
+
+    case 5:
+      // Log: Admin logged out
+      writeLog("admin", "Logged out");
       clearUI();
       return; // Log out — return to main login menu
 
     default:
-      printf("\n>> Enter a valid option (1-4) and try again.\n");
+      printf("\n>> Enter a valid option (1-5) and try again.\n");
       printf("\nPress ENTER to continue...");
       getchar();
       getchar();
@@ -423,8 +574,10 @@ void adminPanel()
 // FUNCTION: calculatorPanel
 // PURPOSE:  The calculator dashboard loop. User can perform
 //           arithmetic operations or log out.
+// PARAMS:   username - the name of the currently logged-in user,
+//                      used to tag log entries.
 // ============================================================
-void calculatorPanel()
+void calculatorPanel(const char *username)
 {
   int choice;
 
@@ -436,9 +589,14 @@ void calculatorPanel()
     scanf("%d", &choice);
     if (choice == 5)
     {
+      // Log: User logged out
+      writeLog(username, "Logged out");
       clearUI();
       break; // Log out — return to main login menu
     }
+
+    // Temporary buffer for building log messages
+    char logMsg[120];
 
     switch (choice)
     {
@@ -456,6 +614,10 @@ void calculatorPanel()
       scanf("%f", &num2);
 
       result = num1 + num2;
+
+      // Log: Addition operation with operands and result
+      sprintf(logMsg, "Addition: %.3f + %.3f = %.3f", num1, num2, result);
+      writeLog(username, logMsg);
 
       printf("\nResult: %.3f\n", result);
       printf("\nPress ENTER key to return to the main menu...");
@@ -479,6 +641,10 @@ void calculatorPanel()
 
       result = num1 - num2;
 
+      // Log: Subtraction operation with operands and result
+      sprintf(logMsg, "Subtraction: %.3f - %.3f = %.3f", num1, num2, result);
+      writeLog(username, logMsg);
+
       printf("\nResult: %.3f\n", result);
       printf("\nPress ENTER key to return to the main menu...");
       getchar(); // Catch the newline from input
@@ -500,6 +666,10 @@ void calculatorPanel()
       scanf("%f", &num2);
 
       result = num1 * num2;
+
+      // Log: Multiplication operation with operands and result
+      sprintf(logMsg, "Multiplication: %.3f * %.3f = %.3f", num1, num2, result);
+      writeLog(username, logMsg);
 
       printf("\nResult: %.3f\n", result);
       printf("\nPress ENTER key to return to the main menu...");
@@ -525,10 +695,19 @@ void calculatorPanel()
       if (num2 == 0)
       {
         printf("\n>> ERROR: Division by zero is not allowed!\n");
+
+        // Log: Division by zero attempt
+        sprintf(logMsg, "Division: %.3f / %.3f = ERROR (div by zero)", num1, num2);
+        writeLog(username, logMsg);
       }
       else
       {
         result = num1 / num2;
+
+        // Log: Division operation with operands and result
+        sprintf(logMsg, "Division: %.3f / %.3f = %.3f", num1, num2, result);
+        writeLog(username, logMsg);
+
         printf("\nResult: %.3f\n", result);
       }
 
@@ -554,6 +733,7 @@ void calculatorPanel()
 int main()
 {
   int choice;
+  char loggedInUser[MAX_LEN]; // Stores the username of the logged-in user
 
   for (;;)
   {
@@ -567,10 +747,6 @@ int main()
       header();
       printf("|                            |\n");
       printf("|     Shahriar Hasan Siam    |\n");
-      printf("|     Tawsif Rahman          |\n");
-      printf("|     Mohammad Tanim         |\n");
-      printf("|     MD Sabbir Hossain      |\n");
-      printf("|     Eastiak Remon          |\n");
       printf("|                            |\n");
       printf("------------------------------\n");
 
@@ -590,9 +766,10 @@ int main()
 
     case 2:
       // User Login — validate against users.txt, then open calculator
-      if (userLogin())
+      // loggedInUser gets populated inside userLogin() on success
+      if (userLogin(loggedInUser))
       {
-        calculatorPanel(); // Enter calculator on successful login
+        calculatorPanel(loggedInUser); // Pass username so logs can identify the user
       }
       break;
 
