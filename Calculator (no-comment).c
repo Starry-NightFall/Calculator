@@ -3,10 +3,26 @@
 #include <string.h>
 #include <time.h>
 #include <conio.h>
+#include <math.h>
 
 #define USER_FILE "users.txt"
 #define LOG_FILE "log.txt"
 #define MAX_LEN 50
+#define PI 3.14159265358979323846
+
+/* Compute factorial for non-negative integers (max 20 to avoid overflow) */
+long long factorial(int n)
+{
+  if (n < 0) return -1;  /* Error flag for negative input */
+  if (n == 0 || n == 1) return 1;
+
+  long long result = 1;
+  for (int i = 2; i <= n; i++)
+  {
+    result *= i;
+  }
+  return result;
+}
 
 void writeLog(const char *user, const char *operation)
 {
@@ -97,16 +113,31 @@ void loginUI()
 void calcUI()
 {
   header();
+  printf("|    BASIC OPERATIONS        |\n");
+  printf("|   1.  Addition (+)         |\n");
+  printf("|   2.  Subtraction (-)      |\n");
+  printf("|   3.  Multiplication (*)   |\n");
+  printf("|   4.  Division (/)         |\n");
   printf("|                            |\n");
-  printf("|   1. Addition (+)          |\n");
-  printf("|   2. Subtraction (-)       |\n");
-  printf("|   3. Multiplication (*)    |\n");
-  printf("|   4. Division (/)          |\n");
-  printf("|   5. Log Out               |\n");
+  printf("|    POWER & ROOT            |\n");
+  printf("|   5.  Square (x^2)         |\n");
+  printf("|   6.  Cube (x^3)           |\n");
+  printf("|   7.  Square Root          |\n");
+  printf("|   8.  Cube Root            |\n");
+  printf("|                            |\n");
+  printf("|    ADVANCED                |\n");
+  printf("|   9.  Factorial (n!)       |\n");
+  printf("|   10. sin(x)               |\n");
+  printf("|   11. cos(x)               |\n");
+  printf("|   12. tan(x)               |\n");
+  printf("|   13. log (base 10)        |\n");
+  printf("|   14. ln (natural log)     |\n");
+  printf("|                            |\n");
+  printf("|   0.  Log Out              |\n");
   printf("|                            |\n");
   printf("------------------------------\n");
-  printf("\n\n");
-  printf("Select an option (1-5): ");
+  printf("\n");
+  printf("Select an option (0-14): ");
 }
 
 void adminUI()
@@ -480,20 +511,27 @@ void calculatorPanel(const char *username)
   for (;;)
   {
     calcUI();
-    float num1, num2, result;
+    double num1, result;       /* double for better precision with math.h */
+    double num2;
+    int intInput;              /* For factorial input */
 
     scanf("%d", &choice);
-    if (choice == 5)
+
+    /* Option 0 = Log Out */
+    if (choice == 0)
     {
       writeLog(username, "Logged out");
       clearUI();
       break;
     }
 
-    char logMsg[120];
+    char logMsg[150];
 
     switch (choice)
     {
+
+    /* ========== BASIC OPERATIONS ========== */
+
     case 1:
       clearUI();
       printf("\n");
@@ -503,9 +541,9 @@ void calculatorPanel(const char *username)
       printf("\n");
 
       printf("Enter your first number: ");
-      scanf("%f", &num1);
+      scanf("%lf", &num1);
       printf("Enter the second number: ");
-      scanf("%f", &num2);
+      scanf("%lf", &num2);
 
       result = num1 + num2;
 
@@ -516,7 +554,6 @@ void calculatorPanel(const char *username)
       printf("\nPress ENTER key to return to the main menu...");
       getchar();
       getchar();
-
       break;
 
     case 2:
@@ -528,9 +565,9 @@ void calculatorPanel(const char *username)
       printf("\n");
 
       printf("Enter your first number: ");
-      scanf("%f", &num1);
+      scanf("%lf", &num1);
       printf("Enter the second number: ");
-      scanf("%f", &num2);
+      scanf("%lf", &num2);
 
       result = num1 - num2;
 
@@ -541,7 +578,6 @@ void calculatorPanel(const char *username)
       printf("\nPress ENTER key to return to the main menu...");
       getchar();
       getchar();
-
       break;
 
     case 3:
@@ -553,9 +589,9 @@ void calculatorPanel(const char *username)
       printf("\n");
 
       printf("Enter your first number: ");
-      scanf("%f", &num1);
+      scanf("%lf", &num1);
       printf("Enter the second number: ");
-      scanf("%f", &num2);
+      scanf("%lf", &num2);
 
       result = num1 * num2;
 
@@ -566,7 +602,6 @@ void calculatorPanel(const char *username)
       printf("\nPress ENTER key to return to the main menu...");
       getchar();
       getchar();
-
       break;
 
     case 4:
@@ -578,35 +613,316 @@ void calculatorPanel(const char *username)
       printf("\n");
 
       printf("Enter your first number: ");
-      scanf("%f", &num1);
+      scanf("%lf", &num1);
       printf("Enter the second number: ");
-      scanf("%f", &num2);
+      scanf("%lf", &num2);
 
       if (num2 == 0)
       {
         printf("\n>> ERROR: Division by zero is not allowed!\n");
-
         sprintf(logMsg, "Division: %.3f / %.3f = ERROR (div by zero)", num1, num2);
         writeLog(username, logMsg);
       }
       else
       {
         result = num1 / num2;
-
         sprintf(logMsg, "Division: %.3f / %.3f = %.3f", num1, num2, result);
         writeLog(username, logMsg);
-
         printf("\nResult: %.3f\n", result);
       }
 
       printf("\nPress ENTER key to return to the main menu...");
       getchar();
       getchar();
+      break;
 
+    /* ========== POWER & ROOT OPERATIONS ========== */
+
+    case 5:
+      clearUI();
+      printf("\n");
+      printf("========================\n");
+      printf("|        SQUARE        |\n");
+      printf("========================\n");
+      printf("\n");
+
+      printf("Enter a number: ");
+      scanf("%lf", &num1);
+
+      result = num1 * num1;
+
+      sprintf(logMsg, "Square: (%.3f)^2 = %.3f", num1, result);
+      writeLog(username, logMsg);
+
+      printf("\nResult: %.3f\n", result);
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 6:
+      clearUI();
+      printf("\n");
+      printf("========================\n");
+      printf("|         CUBE         |\n");
+      printf("========================\n");
+      printf("\n");
+
+      printf("Enter a number: ");
+      scanf("%lf", &num1);
+
+      result = num1 * num1 * num1;
+
+      sprintf(logMsg, "Cube: (%.3f)^3 = %.3f", num1, result);
+      writeLog(username, logMsg);
+
+      printf("\nResult: %.3f\n", result);
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 7:
+      clearUI();
+      printf("\n");
+      printf("============================\n");
+      printf("|      SQUARE ROOT         |\n");
+      printf("============================\n");
+      printf("\n");
+
+      printf("Enter a number: ");
+      scanf("%lf", &num1);
+
+      /* Negative numbers have no real square root */
+      if (num1 < 0)
+      {
+        printf("\n>> ERROR: Cannot compute square root of a negative number!\n");
+        sprintf(logMsg, "Sqrt: sqrt(%.3f) = ERROR (negative)", num1);
+        writeLog(username, logMsg);
+      }
+      else
+      {
+        result = sqrt(num1);
+        sprintf(logMsg, "Sqrt: sqrt(%.3f) = %.6f", num1, result);
+        writeLog(username, logMsg);
+        printf("\nResult: %.6f\n", result);
+      }
+
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 8:
+      clearUI();
+      printf("\n");
+      printf("============================\n");
+      printf("|       CUBE ROOT          |\n");
+      printf("============================\n");
+      printf("\n");
+
+      printf("Enter a number: ");
+      scanf("%lf", &num1);
+
+      /* cbrt handles negative numbers correctly */
+      result = cbrt(num1);
+
+      sprintf(logMsg, "Cbrt: cbrt(%.3f) = %.6f", num1, result);
+      writeLog(username, logMsg);
+
+      printf("\nResult: %.6f\n", result);
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    /* ========== ADVANCED OPERATIONS ========== */
+
+    case 9:
+      clearUI();
+      printf("\n");
+      printf("============================\n");
+      printf("|       FACTORIAL          |\n");
+      printf("============================\n");
+      printf("\n");
+
+      printf("Enter a non-negative integer (max 20): ");
+      scanf("%d", &intInput);
+
+      if (intInput < 0)
+      {
+        printf("\n>> ERROR: Factorial is not defined for negative numbers!\n");
+        sprintf(logMsg, "Factorial: %d! = ERROR (negative)", intInput);
+        writeLog(username, logMsg);
+      }
+      else if (intInput > 20)
+      {
+        printf("\n>> ERROR: Input too large! Maximum supported is 20.\n");
+        sprintf(logMsg, "Factorial: %d! = ERROR (overflow)", intInput);
+        writeLog(username, logMsg);
+      }
+      else
+      {
+        long long factResult = factorial(intInput);
+        sprintf(logMsg, "Factorial: %d! = %lld", intInput, factResult);
+        writeLog(username, logMsg);
+        printf("\nResult: %d! = %lld\n", intInput, factResult);
+      }
+
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 10:
+      clearUI();
+      printf("\n");
+      printf("========================\n");
+      printf("|       SIN(x)        |\n");
+      printf("========================\n");
+      printf("\n");
+
+      printf("Enter angle in degrees: ");
+      scanf("%lf", &num1);
+
+      /* Convert degrees to radians for sin() */
+      result = sin(num1 * PI / 180.0);
+
+      sprintf(logMsg, "Sin: sin(%.3f deg) = %.6f", num1, result);
+      writeLog(username, logMsg);
+
+      printf("\nResult: sin(%.3f) = %.6f\n", num1, result);
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 11:
+      clearUI();
+      printf("\n");
+      printf("========================\n");
+      printf("|       COS(x)        |\n");
+      printf("========================\n");
+      printf("\n");
+
+      printf("Enter angle in degrees: ");
+      scanf("%lf", &num1);
+
+      /* Convert degrees to radians for cos() */
+      result = cos(num1 * PI / 180.0);
+
+      sprintf(logMsg, "Cos: cos(%.3f deg) = %.6f", num1, result);
+      writeLog(username, logMsg);
+
+      printf("\nResult: cos(%.3f) = %.6f\n", num1, result);
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 12:
+      clearUI();
+      printf("\n");
+      printf("========================\n");
+      printf("|       TAN(x)        |\n");
+      printf("========================\n");
+      printf("\n");
+
+      printf("Enter angle in degrees: ");
+      scanf("%lf", &num1);
+
+      /* Check for undefined angles (90, 270, etc.) */
+      {
+        double normalized = fmod(num1, 360.0);
+        if (normalized < 0) normalized += 360.0;
+
+        if (fabs(normalized - 90.0) < 1e-9 || fabs(normalized - 270.0) < 1e-9)
+        {
+          printf("\n>> ERROR: tan(%.3f) is undefined!\n", num1);
+          sprintf(logMsg, "Tan: tan(%.3f deg) = ERROR (undefined)", num1);
+          writeLog(username, logMsg);
+        }
+        else
+        {
+          result = tan(num1 * PI / 180.0);
+          sprintf(logMsg, "Tan: tan(%.3f deg) = %.6f", num1, result);
+          writeLog(username, logMsg);
+          printf("\nResult: tan(%.3f) = %.6f\n", num1, result);
+        }
+      }
+
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 13:
+      clearUI();
+      printf("\n");
+      printf("============================\n");
+      printf("|     LOG (base 10)        |\n");
+      printf("============================\n");
+      printf("\n");
+
+      printf("Enter a positive number: ");
+      scanf("%lf", &num1);
+
+      /* log10 is only defined for positive numbers */
+      if (num1 <= 0)
+      {
+        printf("\n>> ERROR: Logarithm is only defined for positive numbers!\n");
+        sprintf(logMsg, "Log10: log10(%.3f) = ERROR (non-positive)", num1);
+        writeLog(username, logMsg);
+      }
+      else
+      {
+        result = log10(num1);
+        sprintf(logMsg, "Log10: log10(%.3f) = %.6f", num1, result);
+        writeLog(username, logMsg);
+        printf("\nResult: log10(%.3f) = %.6f\n", num1, result);
+      }
+
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
+      break;
+
+    case 14:
+      clearUI();
+      printf("\n");
+      printf("============================\n");
+      printf("|     LN (natural log)     |\n");
+      printf("============================\n");
+      printf("\n");
+
+      printf("Enter a positive number: ");
+      scanf("%lf", &num1);
+
+      /* Natural log is only defined for positive numbers */
+      if (num1 <= 0)
+      {
+        printf("\n>> ERROR: Natural log is only defined for positive numbers!\n");
+        sprintf(logMsg, "Ln: ln(%.3f) = ERROR (non-positive)", num1);
+        writeLog(username, logMsg);
+      }
+      else
+      {
+        result = log(num1);
+        sprintf(logMsg, "Ln: ln(%.3f) = %.6f", num1, result);
+        writeLog(username, logMsg);
+        printf("\nResult: ln(%.3f) = %.6f\n", num1, result);
+      }
+
+      printf("\nPress ENTER key to return to the main menu...");
+      getchar();
+      getchar();
       break;
 
     default:
-      printf("Enter a correct number (1-5) and try again.");
+      printf("\n>> Enter a valid option (0-14) and try again.\n");
+      printf("\nPress ENTER to continue...");
+      getchar();
+      getchar();
       break;
     }
   }
